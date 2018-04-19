@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+ <head>
+  <meta charset="UTF-8">
+  <title>DUO sequencer emulator</title>
+  <link rel="stylesheet" href="sequencer.css">
+ </head>
+
+ <body>
+  <div id="controlSection">
+   BPM:<input id="bpm" type="range" min="10" max="200" value="120">
+   gate time:<input id="gateTime" type="range" min="10" max="200" value="100">
+   <button id="bootloaderButton" onclick="rebootBootloader()">REBOOT</button>
+   <label for="outputPortSelector">output:</label><select id="outputPortSelector"></select>
+ </div>
+
+ <div id="sequencerSection">
+  <button id="startButton" onclick="toggleClock();"><img src="button_play.svg"></button>
+  <div id="sequencerButtons">
+  </div>
+ </div>
+ <div id="keyboardSection">
+  <div id="keyboardButtons">
+  </div>
+ </div>
+ <script src="js/NoteStep.js"></script>
+ <script src="js/NoteSequencer.js"></script>
+ <script src="js/Clock.js"></script>
+ <script>  
+  var gateTime = 100;
+  var intervalID;
+  var noteSeq = null;
+  const MS_PER_MINUTE = 60*1000;  
+  const PPQN = 12;
+
+  var colors = [ 
+    '#f00',
+    '#f31',
+    '#fa3', 
+    '#fd3', 
+    '#af3', 
+    '#8f3', 
+    '#3f3', 
+    '#3f8', 
+    '#34f', 
+    '#c3f', 
+    '#f3f', 
+    '#f3b', 
+    '#f35', 
+    '#f21', 
+    '#caf', 
+    '#9f3', 
+    '#7f3', 
+    '#5f3', 
+    '#3e2', 
+    '#3c8', 
+    '#39c', 
+    '#76c', 
+    '#b3b', 
+    '#f38' ];
+  var midiAccess = null;
+  var midiOut = null;
+
+  function noteOn(noteNumber, velocity) {
+    midiOut.send( [0x90, noteNumber, 0x7f] );
+  }
+
+  function noteOff(noteNumber) {
+    midiOut.send( [0x80, noteNumber, 0x40] );
+  }
+
+  function initSequencer() {
+    var numSteps = 16;
+
+    noteSeq = new NoteSequencer(numSteps);
+
+    for(var i = 0; i < noteSeq.length; i++) {
+      noteSeq.noteStep[i].value = Math.floor(Math.random()*30+30);
+      noteSeq.noteStep[i].enabled = true;
+    }
+  }
+
+  function makeSequencerButtons() {
+    var seq = document.getElementById("sequencerButtons");
+    var numSteps = noteSeq.length;
+    for(var c = 0; c < numSteps; c++) {
+      let step = noteSeq.noteStep[c];
+      var button = document.createElement("button"); 
+
+      button.innerHTML = step.value;
+
+      if(step.enabled) {
+        button.style.backgroundColor = colors[step.value%24];
+      } 
+
+      button.onclick = function() {
+        step.enabled = !step.enabled;
+      }
+      seq.append(button);
+    }
+  }
+
+  function makeKeyboardButtons() {
+    var kbd = document.getElementById("keyboardButtons");
+    var numKeys = 25;
+    var rootNote = 36;
+
+    for(var c = 0; c < numKeys; c++) {
+      var button = document.createElement("button"); 
+
+      button.innerHTML = (c+rootNote) + '';
+
+      button.onclick = function() {
+        var nextStep = noteSeq.getNextStep();
+        nextStep.value = parseInt(this.innerHTML,10);
+        nextStep.enabled = true;
+        noteSeq.advance();
+      }
+      kbd.append(button);
+    }
+  }
+
+  function rebootBootloader() {
+    // Dato DUO reboot sequence
+    midiOut.send([0xf0, 0x7d, 0x64, 0x0b, 0xf7]);
+  }
+
+  var bpm = document.getElementById("bpm").value;
+  var clock = new Clock(() => noteSeq.tick(), MS_PER_MINUTE/PPQN/bpm);
+
+  function toggleClock() {
+    if(clock.isRunning) {
+      clock.stop();
+    } else {
+      clock.start();
+    }
+  }
+
+  function draw() {
+    var seq = document.getElementById("sequencerButtons");
+    var r = 360/seq.children.length;
+
+    for(var c = 0; c < seq.children.length; c++) {
+      var button = seq.children[c];
+      var step = noteSeq.noteStep[c];
+
+      if(step.enabled) {
+        button.style.backgroundColor = colors[step.value%24];
+      } else {
+        button.style.backgroundColor = '#eee';
+      }
+
+      button.innerHTML = step.value;
+
+      //rotate the button depending on the number of steps
+      button.style.transformOrigin = '-100px 0';
+      button.style.transform = "rotate(" + (-90+r*c) + "deg)";
+
+      if(c == noteSeq.currentStep) {
+        button.focus();
+      }
+    }
+
+    g = document.getElementById("gateTime").value;
+    if(g > 10 && g < 200) {
+      gateTime = g;
+    }
+
+    var bpm = document.getElementById("bpm").value;
+    clock.setInterval(MS_PER_MINUTE/PPQN/bpm);
+  } 
+
+  function onMIDIInit(midi) {
+    midiAccess = midi;
+
+    for (let output of midiAccess.outputs.values()) {
+      var opt = document.createElement("option");
+      opt.text = output.name;
+      document.getElementById("outputPortSelector").add(opt);
+      // TODO: this doesn't actually allow port selection
+      midiOut = output;
+    }
+  }
+
+  function onMIDISystemError(midi) {
+    console.log(midi);
+  }
+
+  window.addEventListener('load', function() {   
+    initSequencer();
+    makeSequencerButtons();
+    makeKeyboardButtons();
+
+    // Enable or disable the bootloader button for the Dato DUO
+    var enableSysex = false;
+
+    if(!enableSysex) {
+      document.getElementById("bootloaderButton").remove();
+    }
+
+    navigator.requestMIDIAccess({
+        sysex: enableSysex
+    }).then( onMIDIInit, onMIDISystemError );
+
+    draw();
+    var drawId = window.setInterval(() => draw(), 100);
+  });
+
+ </script>
+ </body>
+</html>

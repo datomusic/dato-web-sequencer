@@ -1,0 +1,69 @@
+body {
+  font-family: 'Sailec','Sailec-Medium', 'Helvetica', 'Arial', sans-serif;
+  color: #303030;
+  background-color: #eee;
+  font-size: 21px;
+  text-align: center;
+  font-weight: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+button {
+  cursor: pointer;
+}
+#controlSection {
+  background-color: #fff;
+  padding: 1em;
+}
+#sequencerSection {
+  position: relative;
+  height: 200px;
+}
+#sequencerButtons button {
+  position: absolute;
+  top: 150px;
+  margin-left: 107px;
+  height: 50px;
+  width: 50px;
+  border-radius: 25px;
+  border: solid 4px #ffffffcc;
+}
+#sequencerButtons button.disabled {
+  border: solid 4px #eee;
+  outline: 0;
+}
+#sequencerButtons button:focus {
+  border: solid 4px #ffffffff;
+  outline: 0;
+}
+#startButton {
+  background: transparent;
+  border: none;
+  margin: 0 auto;
+  padding-top: 110px;
+  width: 80px;
+}
+#startButton:focus {
+  outline: 0;
+}
+#keyboardSection {
+  padding-top: 100px;
+}
+#keyboardButtons button {
+  height: 100px;
+  margin: 1px;
+  border: solid 1px black;
+  border-radius: 0 0 8px 8px;
+}
+#keyboardButtons button:nth-child(12n+2),
+#keyboardButtons button:nth-child(12n+4),
+#keyboardButtons button:nth-child(12n+7),
+#keyboardButtons button:nth-child(12n+9),
+#keyboardButtons button:nth-child(12n+11) {
+  height: 60px;
+  background-color: #444;
+  color: white;
+  position: absolute;
+  margin-left: -15px;
+  border: solid 1px black;
+  }
